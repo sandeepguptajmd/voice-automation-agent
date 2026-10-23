@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Voice Automation Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #070b18;
+    --card: rgba(255,255,255,0.04);
+    --border: rgba(255,255,255,0.09);
+    --text: #e8ecf6;
+    --muted: #8b95b0;
+    --accent: #7c5cff;
+    --accent2: #22d3ee;
+    --ok: #34d399;
+    --danger: #f43f5e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    background-image:
+      radial-gradient(900px 500px at 15% -10%, rgba(124,92,255,0.25), transparent 60%),
+      radial-gradient(800px 500px at 90% 10%, rgba(34,211,238,0.15), transparent 60%);
+    background-repeat: no-repeat;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 28px 22px 60px; }
+
+  nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 56px; }
+  .logo { font-weight: 800; font-size: 17px; letter-spacing: -.01em; display: flex; align-items: center; gap: 10px; }
+  .logo-dot { width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, var(--accent), var(--accent2)); display: grid; place-items: center; font-size: 15px; }
+  .badge { font-size: 12px; font-weight: 600; color: var(--accent2); border: 1px solid rgba(34,211,238,.35); background: rgba(34,211,238,.08); padding: 5px 11px; border-radius: 999px; }
+
+  .hero { text-align: center; margin-bottom: 40px; }
+  h1 { font-size: clamp(36px, 7vw, 58px); font-weight: 800; letter-spacing: -.035em; line-height: 1.05; }
+  h1 span { background: linear-gradient(90deg, var(--accent), var(--accent2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .tagline { color: var(--muted); font-size: 18px; margin: 18px auto 26px; max-width: 560px; line-height: 1.55; }
+  .pipeline { display: flex; justify-content: center; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; font-weight: 600; }
+  .pipeline .chip { background: var(--card); border: 1px solid var(--border); padding: 7px 13px; border-radius: 999px; }
+  .pipeline .arrow { color: var(--muted); }
+
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 26px; margin-bottom: 18px; backdrop-filter: blur(8px); }
+  .label { font-size: 12px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+
+  .mic-card { text-align: center; padding: 38px 26px; }
+  .mic-wrap { position: relative; width: 112px; height: 112px; margin: 0 auto 18px; }
+  .ring { position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--accent); opacity: 0; }
+  .recording .ring { animation: ripple 1.6s infinite; }
+  .recording .ring:nth-child(2) { animation-delay: .5s; }
+  @keyframes ripple { 0% { transform: scale(.9); opacity: .7; } 100% { transform: scale(1.7); opacity: 0; } }
+  #micBtn {
+    position: relative; z-index: 2; width: 112px; height: 112px; border-radius: 50%; border: 0; cursor: pointer;
+    background: linear-gradient(135deg, var(--accent), #5b8cff); color: #fff; font-size: 40px;
+    box-shadow: 0 12px 40px rgba(124,92,255,.45); transition: transform .15s;
+  }
+  #micBtn:hover { transform: scale(1.05); }
+  #micBtn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+  .recording #micBtn { background: linear-gradient(135deg, var(--danger), #fb7185); box-shadow: 0 12px 40px rgba(244,63,94,.5); }
+  #status { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+  #hint { color: var(--muted); font-size: 14px; }
+  #timer { font-family: 'JetBrains Mono', monospace; color: var(--danger); font-size: 15px; margin-top: 8px; height: 20px; }
+
+  .progress { display: flex; justify-content: center; gap: 22px; margin-top: 20px; flex-wrap: wrap; }
+  .progress.hidden { display: none; }
+  .pstep { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 7px; }
+  .pstep::before { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--border); }
+  .pstep.active { color: var(--text); }
+  .pstep.active::before { background: var(--accent2); animation: blink 1s infinite; }
+  .pstep.done { color: var(--ok); }
+  .pstep.done::before { background: var(--ok); }
+  @keyframes blink { 50% { opacity: .3; } }
+
+  .hidden { display: none; }
+  #transcript { font-size: 20px; line-height: 1.55; font-weight: 500; }
+  #transcript::before { content: '“'; color: var(--accent); font-size: 28px; }
+  #transcript::after { content: '”'; color: var(--accent); font-size: 28px; }
+
+  .flow { display: flex; align-items: stretch; gap: 0; overflow-x: auto; padding-bottom: 6px; }
+  .node { min-width: 170px; background: rgba(255,255,255,.05); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
+  .node.trigger { border-color: rgba(124,92,255,.55); background: rgba(124,92,255,.1); }
+  .node .icon { font-size: 24px; margin-bottom: 8px; }
+  .node .kind { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .node .name { font-size: 15px; font-weight: 600; margin-top: 2px; }
+  .conn { display: flex; align-items: center; color: var(--accent2); padding: 0 8px; font-size: 20px; }
+
+  pre { background: #04070f; border: 1px solid var(--border); border-radius: 12px; padding: 16px; overflow: auto; max-height: 320px; font-family: 'JetBrains Mono', monospace; font-size: 12.5px; line-height: 1.6; color: #c3cde6; }
+  .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .row .label { margin: 0; }
+  .btn { border: 0; cursor: pointer; font-weight: 700; font-size: 14px; padding: 10px 18px; border-radius: 10px; background: linear-gradient(135deg, var(--accent), #5b8cff); color: #fff; font-family: inherit; }
+  .btn.ok { background: var(--ok); color: #052e22; }
+  .how { color: var(--muted); font-size: 13px; margin-top: 12px; }
+
+  footer { text-align: center; color: var(--muted); font-size: 13px; margin-top: 34px; line-height: 1.8; }
+  footer b { color: var(--text); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <div class="logo"><div class="logo-dot">🎙️</div> Voice Automation Agent</div>
+    <div class="badge">Hackathon Project</div>
+  </nav>
+
+  <section class="hero">
+    <h1>Speak it.<br><span>Automate it.</span></h1>
+    <p class="tagline">Describe an automation in Hindi, English or Hinglish. Get a ready-to-import n8n workflow in seconds.</p>
+    <div class="pipeline">
+      <span class="chip">🎤 Voice</span><span class="arrow">→</span>
+      <span class="chip">📝 Whisper</span><span class="arrow">→</span>
+      <span class="chip">🧠 LLM</span><span class="arrow">→</span>
+      <span class="chip">⚡ n8n Workflow</span>
+    </div>
+  </section>
+
+  <div class="card mic-card" id="micCard">
+    <div class="mic-wrap">
+      <div class="ring"></div><div class="ring"></div>
+      <button id="micBtn" aria-label="Record">🎤</button>
+    </div>
+    <div id="status">Tap to start speaking</div>
+    <div id="hint">Try: “When a new lead email arrives, reply and log it in Google Sheets”</div>
+    <div id="timer"></div>
+    <div class="progress hidden" id="progress">
+      <div class="pstep" id="p1">Transcribing voice</div>
+      <div class="pstep" id="p2">Understanding intent</div>
+      <div class="pstep" id="p3">Building workflow</div>
+    </div>
+  </div>
+
+  <div id="result" class="hidden">
+    <div class="card">
+      <div class="label">What you said</div>
+      <div id="transcript"></div>
+    </div>
+    <div class="card">
+      <div class="label">Generated workflow</div>
+      <div class="flow" id="flow"></div>
+    </div>
+    <div class="card">
+      <div class="row">
+        <div class="label">n8n workflow JSON</div>
+        <button class="btn" id="copyBtn">Copy workflow</button>
+      </div>
+      <pre id="json"></pre>
+      <div class="how">In n8n: Create workflow → click on the canvas → press Ctrl+V</div>
+    </div>
+  </div>
+
+  <footer>
+    Built with <b>FastAPI</b> · <b>faster-whisper</b> · <b>Groq LLM</b> · <b>n8n</b><br>
+    Voice in, automation out.
+  </footer>
+</div>
+
+<script>
+const micBtn = document.getElementById("micBtn");
+const micCard = document.getElementById("micCard");
+const statusEl = document.getElementById("status");
+const hintEl = document.getElementById("hint");
+const timerEl = document.getElementById("timer");
+const progressEl = document.getElementById("progress");
+const resultEl = document.getElementById("result");
+let recorder = null, chunks = [], workflowData = null, timerId = null, startTime = 0, stepTimers = [];
+
+const ICONS = {
+  scheduleTrigger: "⏰", gmailTrigger: "📧", webhook: "🔗", manualTrigger: "▶️",
+  gmail: "✉️", emailSend: "✉️", googleSheets: "📊", telegram: "✈️", noOp: "⚙️"
+};
+
+micBtn.addEventListener("click", async () => {
+  if (recorder && recorder.state === "recording") { recorder.stop(); return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    recorder = new MediaRecorder(stream);
+    chunks = [];
+    recorder.ondataavailable = (e) => chunks.push(e.data);
+    recorder.onstop = () => {
+      stream.getTracks().forEach((t) => t.stop());
+      clearInterval(timerId);
+      micCard.classList.remove("recording");
+      micBtn.textContent = "🎤";
+      sendAudio(new Blob(chunks, { type: recorder.mimeType }));
+    };
+    recorder.start();
+    micCard.classList.add("recording");
+    micBtn.textContent = "⏹";
+    statusEl.textContent = "Listening… tap again to stop";
+    hintEl.textContent = "Speak clearly, then press the button to send.";
+    progressEl.classList.add("hidden");
+    startTime = Date.now();
+    timerId = setInterval(() => {
+      const s = Math.floor((Date.now() - startTime) / 1000);
+      timerEl.textContent = String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+    }, 250);
+  } catch (err) {
+    statusEl.textContent = "Microphone access denied";
+    hintEl.textContent = err.message;
+  }
+});
+
+function setStep(n) {
+  ["p1", "p2", "p3"].forEach((id, i) => {
+    const el = document.getElementById(id);
+    el.className = "pstep" + (i + 1 < n ? " done" : i + 1 === n ? " active" : "");
+  });
+}
+
+async function sendAudio(blob) {
+  timerEl.textContent = "";
+  micBtn.disabled = true;
+  statusEl.textContent = "Working on it…";
+  hintEl.textContent = "This usually takes a few seconds.";
+  progressEl.classList.remove("hidden");
+  setStep(1);
+  stepTimers.forEach(clearTimeout);
+  stepTimers = [setTimeout(() => setStep(2), 3500), setTimeout(() => setStep(3), 6500)];
+
+  const form = new FormData();
+  form.append("audio", blob, "recording.webm");
+  try {
+    const res = await fetch("/voice-to-workflow", { method: "POST", body: form });
+    if (!res.ok) throw new Error("Server error " + res.status + " (check the terminal)");
+    const data = await res.json();
+    stepTimers.forEach(clearTimeout);
+    ["p1", "p2", "p3"].forEach((id) => (document.getElementById(id).className = "pstep done"));
+    showResult(data);
+    statusEl.textContent = "Workflow ready ✨";
+    hintEl.textContent = "Tap the mic to create another one.";
+  } catch (err) {
+    stepTimers.forEach(clearTimeout);
+    progressEl.classList.add("hidden");
+    statusEl.textContent = "Something went wrong";
+    hintEl.textContent = err.message;
+  } finally {
+    micBtn.disabled = false;
+  }
+}
+
+function showResult(data) {
+  workflowData = data.workflow;
+  document.getElementById("transcript").textContent = data.text;
+
+  const flow = document.getElementById("flow");
+  flow.innerHTML = "";
+  (workflowData.nodes || []).forEach((n, i) => {
+    if (i > 0) {
+      const c = document.createElement("div");
+      c.className = "conn";
+      c.textContent = "→";
+      flow.appendChild(c);
+    }
+    const key = (n.type || "").split(".").pop();
+    const el = document.createElement("div");
+    el.className = "node" + (i === 0 ? " trigger" : "");
+    const icon = document.createElement("div"); icon.className = "icon"; icon.textContent = ICONS[key] || "⚙️";
+    const kind = document.createElement("div"); kind.className = "kind"; kind.textContent = i === 0 ? "Trigger" : "Step " + i;
+    const name = document.createElement("div"); name.className = "name"; name.textContent = n.name;
+    el.append(icon, kind, name);
+    flow.appendChild(el);
+  });
+
+  document.getElementById("json").textContent = JSON.stringify(workflowData, null, 2);
+  resultEl.classList.remove("hidden");
+  resultEl.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+document.getElementById("copyBtn").addEventListener("click", async () => {
+  const btn = document.getElementById("copyBtn");
+  await navigator.clipboard.writeText(JSON.stringify(workflowData, null, 2));
+  btn.textContent = "Copied ✓";
+  btn.classList.add("ok");
+  setTimeout(() => { btn.textContent = "Copy workflow"; btn.classList.remove("ok"); }, 1800);
+});
+</script>
+</body>
+</html>

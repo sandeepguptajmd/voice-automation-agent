@@ -1,0 +1,7 @@
+fastapi
+uvicorn[standard]
+faster-whisper
+python-multipart
+python-dotenv
+groq
+av==15.1.0
